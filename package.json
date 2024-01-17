@@ -1,0 +1,10 @@
+{
+  "name": "hardhat-project",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^3.0.0",
+    "hardhat": "^2.19.4"
+  },
+  "dependencies": {
+    "@domin-network/contracts": "^1.0.5"
+  }
+}
