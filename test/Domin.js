@@ -12,6 +12,7 @@ describe('Domin', function () {
     let nft;
     let nftHolder;
     let redeemWithBurnOperator;
+    let feeToken;
 
     this.beforeAll(async function () {
         accounts = await ethers.getSigners();
@@ -34,6 +35,7 @@ NFT Holder: ${nftHolder.address}
         await grantRoles();
         await mintAuthorizerNFT();
         await Promise.all([mintOperatorNFT(), mintTestNFT()]);
+        await deployFeeToken();
     });
 
     async function deployManager() {
@@ -144,6 +146,22 @@ OperatorNFT: ${operatorNFTAddress}`
             )
         ]);
     }
+
+    async function deployFeeToken() {
+        const DominToken = await ethers.getContractFactory('DominToken');
+        const token = await DominToken.deploy();
+        await token.waitForDeployment();
+        await vault.setFeeToken(await token.getAddress());
+        const defaultFeeAmount = await vault.defaultRedeemFee();
+        await token.faucet(authorizerNFTHolder.address, defaultFeeAmount);
+        await token.connect(authorizerNFTHolder).approve(await vault.getAddress(), defaultFeeAmount);
+        await vault.connect(authorizerNFTHolder).depositPrepaidFee(
+            await authorizerNFT.getAddress(),
+            await authorizerNFT.tokenOfOwnerByIndex(authorizerNFTHolder.address, 0),
+            defaultFeeAmount,
+        )
+        feeToken = token;
+    };
 
     async function getRedemptions() {
         return [
@@ -272,5 +290,24 @@ OperatorNFT: ${operatorNFTAddress}`
             redemptions[0].memo,
         );
         expect(await nft.balanceOf(nftHolder.address)).to.equal(9);
+    });
+
+    it('should be earn fees into vault', async () => {
+        const redemptions = await getRedemptions();
+        const operatorNFTTokenId = await operatorNFT.tokenOfOwnerByIndex(operatorNFTHolder.address, 0);
+        const authorizerNFTTokenId = await authorizerNFT.tokenOfOwnerByIndex(authorizerNFTHolder.address, 0);
+        await authorizerNFT.connect(accounts[1]).redeemRedemptions(
+            authorizerNFTTokenId,
+            operatorNFTTokenId,
+            redemptions,
+        );
+        const { token, amount } = await vault.getFeeBalance(authorizerNFT, authorizerNFTTokenId);
+        expect(await feeToken.getAddress()).to.equal(token);
+        expect(Number(amount)).to.equal(0);
+        const authorizerNFTReward = await vault.getAuthorizerNFTReward(authorizerNFT, authorizerNFTTokenId);
+        expect(
+            Number(authorizerNFTReward.amount)
+        ).to.equal(
+            Number(await vault.defaultAuthorizerRewardPercentage()) * Number(await vault.defaultRedeemFee()) / 100);
     });
 });

@@ -15,8 +15,9 @@ contract DominVault is IDominVault, AccessManaged {
     constructor(address manager) AccessManaged(manager) {}
 
     IERC20 public feeToken;
-    uint256 public operatorReward = 50;
-    uint256 public authorizerReward = 15;
+    uint256 public defaultOperatorRewardPercentage = 50;
+    uint256 public defaultAuthorizerRewardPercentage = 15;
+    uint256 public defaultRedeemFee = 1000000000000000000;
     mapping(AuthorizerNFT => mapping(uint256 => mapping(IERC20 => uint256)))
         public feeAmounts;
     mapping(AuthorizerNFT => mapping(uint256 => mapping(IERC20 => uint256)))
@@ -25,6 +26,10 @@ contract DominVault is IDominVault, AccessManaged {
         public authorizerRewardAmounts;
     mapping(OperatorNFT => mapping(uint256 => mapping(IERC20 => uint256)))
         public operatorRewardAmounts;
+    mapping(AuthorizerNFT => mapping(uint256 => mapping(IERC20 => uint256)))
+        public authorizerNFTRewardPercentages;
+    mapping(OperatorNFT => mapping(uint256 => mapping(IERC20 => uint256)))
+        public operatorNFTRewardPercentages;
 
     function getFeeBalance(
         AuthorizerNFT authorizer,
@@ -60,6 +65,28 @@ contract DominVault is IDominVault, AccessManaged {
         return (
             feeToken,
             operatorRewardAmounts[operator][operatorTokenId][feeToken]
+        );
+    }
+
+    function getAuthorizerNFTRewardPercentage(
+        AuthorizerNFT authorizer,
+        uint256 authorizerTokenId
+    ) external view returns (IERC20 token, uint256 amount) {
+        return (
+            feeToken,
+            authorizerNFTRewardPercentages[authorizer][authorizerTokenId][
+                feeToken
+            ]
+        );
+    }
+
+    function getOperatorNFTRewardPercentage(
+        OperatorNFT operator,
+        uint256 operatorTokenId
+    ) external view returns (IERC20 token, uint256 amount) {
+        return (
+            feeToken,
+            operatorNFTRewardPercentages[operator][operatorTokenId][feeToken]
         );
     }
 
@@ -121,9 +148,31 @@ contract DominVault is IDominVault, AccessManaged {
         uint256 operatorTokenId,
         uint256 redemptionsCount
     ) external restricted {
-        uint256 totalFeeAmount = feeAmounts[authorizer][authorizerTokenId][
-            feeToken
-        ] * redemptionsCount;
+        uint256 feeAmount = defaultRedeemFee;
+        uint256 operatorReward = defaultOperatorRewardPercentage;
+        uint256 authorizerReward = defaultAuthorizerRewardPercentage;
+        if (feeAmounts[authorizer][authorizerTokenId][feeToken] > 0) {
+            feeAmount = feeAmounts[authorizer][authorizerTokenId][feeToken];
+        }
+        if (
+            operatorNFTRewardPercentages[operator][operatorTokenId][feeToken] >
+            0
+        ) {
+            operatorReward = operatorNFTRewardPercentages[operator][
+                operatorTokenId
+            ][feeToken];
+        }
+        if (
+            authorizerNFTRewardPercentages[authorizer][authorizerTokenId][
+                feeToken
+            ] > 0
+        ) {
+            authorizerReward = authorizerNFTRewardPercentages[authorizer][
+                authorizerTokenId
+            ][feeToken];
+        }
+
+        uint256 totalFeeAmount = feeAmount * redemptionsCount;
         if (
             prepaidFeeAmounts[authorizer][authorizerTokenId][feeToken] <
             totalFeeAmount
@@ -133,26 +182,54 @@ contract DominVault is IDominVault, AccessManaged {
         prepaidFeeAmounts[authorizer][authorizerTokenId][
             feeToken
         ] -= totalFeeAmount;
-        operatorRewardAmounts[operator][operatorTokenId][feeToken] +=
-            (totalFeeAmount * operatorReward) /
+        uint256 operatorRewardAmount = (totalFeeAmount * operatorReward) / 100;
+        uint256 authorizerRewardAmount = (totalFeeAmount * authorizerReward) /
             100;
-        authorizerRewardAmounts[authorizer][authorizerTokenId][feeToken] +=
-            (totalFeeAmount * authorizerReward) /
-            100;
+        if (totalFeeAmount < operatorRewardAmount + authorizerRewardAmount) {
+            revert DominVaultForbiddenPayFees(msg.sender);
+        }
+        operatorRewardAmounts[operator][operatorTokenId][
+            feeToken
+        ] += operatorRewardAmount;
+        authorizerRewardAmounts[authorizer][authorizerTokenId][
+            feeToken
+        ] += authorizerRewardAmount;
     }
 
     function setFeeToken(IERC20 _feeToken) external restricted {
         feeToken = _feeToken;
     }
 
-    function setOperatorReward(uint256 _operatorReward) external restricted {
-        operatorReward = _operatorReward;
+    function setDefaultOperatorRewardPercentage(
+        uint256 _operatorRewardPercentage
+    ) external restricted {
+        defaultOperatorRewardPercentage = _operatorRewardPercentage;
     }
 
-    function setAuthorizerReward(
-        uint256 _authorizerReward
+    function setDefaultAuthorizerRewardPercentage(
+        uint256 _authorizerRewardPercentage
     ) external restricted {
-        authorizerReward = _authorizerReward;
+        defaultAuthorizerRewardPercentage = _authorizerRewardPercentage;
+    }
+
+    function setOperatorNFTRewardPercentage(
+        OperatorNFT operator,
+        uint256 operatorTokenId,
+        uint256 percentage
+    ) external restricted {
+        operatorNFTRewardPercentages[operator][operatorTokenId][
+            feeToken
+        ] = percentage;
+    }
+
+    function setAuthorizerNFTRewardPercentage(
+        AuthorizerNFT authorizer,
+        uint256 authorizerTokenId,
+        uint256 percentage
+    ) external restricted {
+        authorizerNFTRewardPercentages[authorizer][authorizerTokenId][
+            feeToken
+        ] = percentage;
     }
 
     function setFeeAmount(
