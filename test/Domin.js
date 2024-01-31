@@ -67,7 +67,7 @@ NFT Holder: ${nftHolder.address}
         await operatorNFT.setBaseURI('https://example.com/');
         console.log(`
 AuthorizerNFT: ${await authorizerNFT.getAddress()}
-OperatorNFT: ${operatorNFTAddress}`
+OperatorNFT: ${operatorNFTAddress}`,
         );
     }
 
@@ -145,7 +145,7 @@ OperatorNFT: ${operatorNFTAddress}`
                     ethers.keccak256(ethers.toUtf8Bytes('payFees(address,uint256,address,uint256,uint256)')).slice(0, 10),
                 ],
                 AUTHORIZER,
-            )
+            ),
         ]);
     }
 
@@ -161,7 +161,7 @@ OperatorNFT: ${operatorNFTAddress}`
             await authorizerNFT.getAddress(),
             await authorizerNFT.tokenOfOwnerByIndex(authorizerNFTHolder.address, 0),
             defaultFeeAmount,
-        )
+        );
         feeToken = token;
     };
 
@@ -172,7 +172,7 @@ OperatorNFT: ${operatorNFTAddress}`
                 tokenId: await nft.tokenOfOwnerByIndex(nftHolder.address, 0),
                 redemptionId: ethers.encodeBytes32String('test'),
                 memo: 'test',
-            }
+            },
         ];
     }
 
@@ -248,7 +248,7 @@ OperatorNFT: ${operatorNFTAddress}`
             authorizerNFT.connect(accounts[1]).redeemRedemptions(
                 await authorizerNFT.tokenOfOwnerByIndex(authorizerNFTHolder.address, 0),
                 operatorNFTTokenId,
-                redemptions
+                redemptions,
             ),
         ).to.be.revertedWithCustomError(nft, 'ERC721InsufficientApproval').withArgs(operatorAddress, redemptions[0].tokenId);
     });
@@ -313,9 +313,9 @@ OperatorNFT: ${operatorNFTAddress}`
         expect(Number(amount)).to.equal(0);
         const authorizerNFTReward = await vault.getAuthorizerNFTReward(authorizerNFT, authorizerNFTTokenId);
         expect(
-            Number(authorizerNFTReward.amount)
+            Number(authorizerNFTReward.amount),
         ).to.equal(
             Number(await vault.defaultAuthorizerRewardPercentage()) * Number(await vault.defaultRedeemFee()) / 100);
-        console.log(`Redemptions: ${redemptions[0].redemptionId}`)
+        console.log(`Redemptions: ${redemptions[0].redemptionId}`);
     });
 });

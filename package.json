@@ -3,9 +3,13 @@
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^3.0.0",
     "dotenv": "^16.4.1",
+    "eslint": "^8.56.0",
     "hardhat": "^2.19.4"
   },
   "dependencies": {
     "@domin-network/contracts": "^1.0.5"
+  },
+  "eslintConfig": {
+    "extends": ".eslintrc.js"
   }
 }
