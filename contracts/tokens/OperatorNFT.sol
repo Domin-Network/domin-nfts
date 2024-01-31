@@ -19,6 +19,7 @@ contract OperatorNFT is ERC6672, ERC721Burnable, ERC2981, AccessManaged {
     mapping(uint256 => IOperator) private _operators;
     mapping(uint256 => uint256) private _authorizerTokenIds;
     EnumerableSet.AddressSet private _verifiedOperatorsSet;
+    string private baseURI;
 
     constructor(
         string memory _name,
@@ -128,6 +129,14 @@ contract OperatorNFT is ERC6672, ERC721Burnable, ERC2981, AccessManaged {
         uint256 operatorTokenId
     ) external view returns (uint256) {
         return _authorizerTokenIds[operatorTokenId];
+    }
+
+    function setBaseURI(string memory _baseURI_) external restricted {
+        baseURI = _baseURI_;
+    }
+
+    function _baseURI() internal view override returns (string memory) {
+        return baseURI;
     }
 
     function _register(

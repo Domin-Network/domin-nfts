@@ -58,11 +58,13 @@ NFT Holder: ${nftHolder.address}
         const AuthorizerNFT = await ethers.getContractFactory('AuthorizerNFT');
         const managerAddress = await manager.getAddress();
         const vaultAddress = await vault.getAddress();
-        const contract = await AuthorizerNFT.deploy('AuthorizerNFT', 'NNFT', accounts[0].address, 500, managerAddress, vaultAddress);
+        const contract = await AuthorizerNFT.deploy('AuthorizerNFT', 'ANFT', accounts[0].address, 500, managerAddress, vaultAddress);
         await contract.waitForDeployment();
         const operatorNFTAddress = await contract.getOperatorNFTAddress();
         operatorNFT = await ethers.getContractAt('OperatorNFT', operatorNFTAddress);
         authorizerNFT = contract;
+        await authorizerNFT.setBaseURI('https://example.com/');
+        await operatorNFT.setBaseURI('https://example.com/');
         console.log(`
 AuthorizerNFT: ${await authorizerNFT.getAddress()}
 OperatorNFT: ${operatorNFTAddress}`
@@ -173,6 +175,11 @@ OperatorNFT: ${operatorNFTAddress}`
             }
         ];
     }
+
+    it('base URI is set', async () => {
+        expect(await authorizerNFT.tokenURI(1)).to.equal('https://example.com/1');
+        expect(await operatorNFT.tokenURI(1)).to.equal('https://example.com/1');
+    });
 
     it('has roles', async () => {
         const MINTER = 1n;
@@ -309,5 +316,6 @@ OperatorNFT: ${operatorNFTAddress}`
             Number(authorizerNFTReward.amount)
         ).to.equal(
             Number(await vault.defaultAuthorizerRewardPercentage()) * Number(await vault.defaultRedeemFee()) / 100);
+        console.log(`Redemptions: ${redemptions[0].redemptionId}`)
     });
 });
