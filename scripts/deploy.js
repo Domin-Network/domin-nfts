@@ -86,6 +86,24 @@ async function main() {
         (
             await accessManager.getTargetFunctionRole(
                 operatorNFTAddress,
+                ethers.keccak256(ethers.toUtf8Bytes('safeMint(uint256,address)')).slice(0, 10),
+            ) !== AUTHORIZER
+        )
+    ) {
+        console.log('Setting target function roles for AUTHORIZER');
+        accessManager.setTargetFunctionRole(
+            operatorNFTAddress,
+            [
+                ethers.keccak256(ethers.toUtf8Bytes('safeMint(uint256,address)')).slice(0, 10),
+                ethers.keccak256(ethers.toUtf8Bytes('operatorRedeem(uint256,(address,uint256,bytes32,string))')).slice(0, 10),
+            ],
+            AUTHORIZER,
+        );
+    }
+    if (
+        (
+            await accessManager.getTargetFunctionRole(
+                operatorNFTAddress,
                 hre.ethers.keccak256(hre.ethers.toUtf8Bytes('verifyOperator(address,bool)')).slice(0, 10),
             )
         ) !== AUDITOR
